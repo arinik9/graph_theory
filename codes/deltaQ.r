@@ -9,8 +9,6 @@
   #community is a vector of nodes as c(1, 2, 3)
   #g is a weighted graph
 deltaQ = function(node, community, g){
-  #community, node'lar vektorudur: c(1, 2, 3) gibi
-
   #m: graph size OR the sum of the weights of all the links in the network
   m <- sum(E(g)$weight)
 
