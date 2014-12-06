@@ -29,8 +29,8 @@ deltaQ = function(node, community, g){
   k_i <- sum(E(g)[from(node)]$weight)
 
   #the terms of DeltaQ
-  term1 <- ((c_in+k_i_in) - ((c_tot+k_i)^2/(2*m)))/(2*m)
+  term1 <- ((c_in+(2*k_i_in)) - ((c_tot+k_i)^2/(2*m)))/(2*m)
   term2 <- (c_in - (c_tot^2)/(2*m) - (k_i^2)/(2*m))/(2*m)
 
-  return term1 - term2
+  return(term1 - term2)
 }
