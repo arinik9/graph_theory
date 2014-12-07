@@ -8,7 +8,7 @@
 #INPUT:
   #community is a vector of nodes as c(1, 2, 3)
   #g is a weighted graph
-deltaQ = function(node, community, g){
+deltaQ = function(g, node, community){
   #m: graph size OR the sum of the weights of all the links in the network
   m <- sum(E(g)$weight)
 
@@ -32,5 +32,5 @@ deltaQ = function(node, community, g){
   term1 <- ((c_in+(2*k_i_in)) - ((c_tot+k_i)^2/(2*m)))/(2*m)
   term2 <- (c_in - (c_tot^2)/(2*m) - (k_i^2)/(2*m))/(2*m)
 
-  return(term1 - term2)
+  return(term1-term2)
 }

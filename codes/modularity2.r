@@ -1,19 +1,10 @@
-modularity2=function(community_str,g,weighted){
-
-  if (weighted){
-    if (get.edge.attribute(g,"weight")){
-    
-    }
-    else{
-      g=set.edge.attribute(g,"weight",value=1)
-    }
-  }
-  else{
+modularity2=function(g, community_str){
+  if (length(get.edge.attribute(g,"weight")) == 0){ 
+    #eger graph unweighted ise link saysisini weight olarak gosteririz
     g=set.edge.attribute(g,"weight",value=1)
   }
 
   coms=unique(community_str)
-
   sums=0
   m=sum(E(g)$weight)
 
@@ -26,9 +17,5 @@ modularity2=function(community_str,g,weighted){
     sums=sums+(eii-(aii*aii))
   }
 
-
-
-
   return(sums)
-
 }
