@@ -13,20 +13,26 @@ E(g)$weight <- read.table("/home/nejat/thesis/data/toydata.weight")$V1
 louvain = function(g, verbose=FALSE, nb_pass=10000, directed=FALSE){
   precision <- 0.000001
   gSize <- vcount(g)
-  comm_str <- seq(1, gSize) #each node is a community at beginning
+  comm_str_result <- comm_str <- seq(1, gSize) #each node is a community at beginning
   mod <- modularity2(g, comm_str)
 
   lvl <- one_level(g,verbose)
   comm_str <- lvl$membership
   new_mod <- lvl$modularity
-  g <- partition2graph_binary(g, comm_str, verbose, directed)
+  res <- partition2graph_binary(g, matrix(0,1,1), comm_str_result, comm_str, verbose, directed)#baslangicta matrix(0,1,1) kullandik mat_comm_str icin
+  g <- res$graph
+
+  mat_comm_str <- matrix(0,nrow=1,ncol=1) #initialize ettik community_str matrisini
   
   while((new_mod-mod)>precision){
     mod <- new_mod
     lvl <- one_level(g,verbose)
     comm_str <- lvl$membership
     new_mod <- lvl$modularity
-    g <- partition2graph_binary(g, comm_str, verbose, directed)
+    res <- partition2graph_binary(g, mat_comm_str, comm_str_result, comm_str, verbose, directed)
+    g <- res$graph
+    mat_comm_str <- res$mat_comm_str
+    comm_str_result <- res$comm_str_result
   }
 
   return(list("modularity" = new_mod, "membership" = comm_str))
@@ -35,7 +41,7 @@ louvain = function(g, verbose=FALSE, nb_pass=10000, directed=FALSE){
 
 
 #function: partition2graph_binary()
-partition2graph_binary = function(g, comm_str, verbose=FALSE, directed=FALSE){
+partition2graph_binary = function(g, mat_comm_str=matrix(0,1,1), comm_str_result, comm_str, verbose=FALSE, directed=FALSE){
   if(directed){
     directed_or_undirected = "directed"
   }
@@ -49,7 +55,8 @@ partition2graph_binary = function(g, comm_str, verbose=FALSE, directed=FALSE){
   #rename communities - begin
   new_str <- vector(mode="integer",length=length(comm_str))
   final <- 1
-  #length_row <- 0 # ayni zamanda, community'ler arasinda en cok node'u olanin node sayisini bulucaz
+  length_row <- 0 # ayni zamanda, community'ler arasinda en cok node'u olanin node sayisini bulucaz
+  max_comm <- 0
   for(node in 1:length_different_comm){
     vec <- different_comm[node]
     #secilen community'ye ait kac node oldugunu buluyoruz
@@ -59,12 +66,41 @@ partition2graph_binary = function(g, comm_str, verbose=FALSE, directed=FALSE){
     final <- final + 1
 
     #tum community'lere kiyasla bir community'deki max node sayisini bulma icin
-    #cur_length <- length(correspondant)
-    #if(length_row < cur_length){
-    #  length_row <- cur_length
-    #}
+    cur_length <- length(correspondant)
+    if(length_row < cur_length){
+      length_row <- cur_length
+      max_comm <- correspondant
+    }
   }
   # rename - end
+
+  if(length(mat_comm_str) != 1){ #matrix(0,1,1)'nin length'i 1 verir cuknu, bunu kullandik
+    if(length(mat_comm_str)==1){     
+      mat_comm_str <- matrix(0,nrow=length_different_comm,ncol=length_row)
+      #satirlar, her community'nin sahip oldugu node'lari iceriyor
+      for(comm in 1:length_different_comm){
+        inner_nodes_in_comm <- which(comm == new_str)
+        mat_comm_str[comm, 1:length(inner_nodes_in_comm)] <- inner_nodes_in_comm
+      }
+    }
+    else{
+      mat_comm_str <- matrix(0,nrow=length_different_comm,ncol=length(mat_comm_str[max_comm,]))
+      #satirlar, her community'nin sahip oldugu node'lari iceriyor
+      for(comm in 1:length_different_comm){
+        inner_nodes_in_comm <- which(comm == new_str)
+	inners <- mat_comm_str[inner_nodes_in_comm,]
+        mat_comm_str[comm, ] <- inners
+      }
+    }
+
+    for(comm in 1:length(length_different_comm)){
+      nodes <- mat_comm_str[comm, ]
+      comm_str_result[which(nodes != 0)] <- comm
+    }
+    cat(" COMM_STR_RESULT: ", comm_str_result, "\n")
+  }
+
+
 
   #max node sayisini bulduktan sonra matrix'i olusturabiliriz
   #matrix'i once sifirla initialize ettik
@@ -91,7 +127,7 @@ partition2graph_binary = function(g, comm_str, verbose=FALSE, directed=FALSE){
     cat("in PARTITION2GRAPH_BINARY function => community structure: ", new_str, "\n")
   }  
   #graph'in node'larini bastan yaratmis olduk => eski graph'daki comm sayisi = yeni graph'daki node sayisi
-  return(g1)
+  return(list("graph" = g1, "comm_str_result" = comm_str_result, "mat_comm_str" = mat_comm_str))
 }
 
 
