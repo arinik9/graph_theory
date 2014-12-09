@@ -14,7 +14,12 @@ deltaQ = function(g, node, community){
 
   ### for find c_in ###
     #c_in: the sum of the weights of the links inside community
-  c_in <- sum(E(induced.subgraph(g, community))$weight)
+      #for get the sum of self loop value
+  self_loops <- 0
+  for(comm in 1:length(community)){
+    self_loops <- self_loops + g[comm, comm]
+  }
+  c_in <- sum(E(induced.subgraph(g, community))$weight) + self_loops
 
   ### for find k_i_in ###
     #the sum of the weights of the links from node(which is in parameters) to nodes in community
@@ -22,11 +27,11 @@ deltaQ = function(g, node, community){
 
   ### for find c_tot ###
     #the sum of the weights of the links incident to nodes in community
-  c_tot <- sum(E(g)[from(community) | to(community)]$weight)
+  c_tot <- sum(E(g)[from(community) | to(community)]$weight) + c_in
 
   ### for find k_i ###
     #the sum of the weights of the links incident to node(which is in parameters)
-  k_i <- sum(E(g)[from(node)]$weight)
+  k_i <- sum(E(g)[from(node) | to(community)]$weight)
 
   #the terms of DeltaQ
   term1 <- ((c_in+(2*k_i_in)) - ((c_tot+k_i)^2/(2*m)))/(2*m)

@@ -19,55 +19,62 @@ g <- read.graph("/home/nejat/thesis/data/toydata.edgelist", format=c("edgelist")
 E(g)$weight <- read.table("/home/nejat/thesis/data/toydata.weight")$V1
 ## end
 
+#function: partition2graph_binary()
+partition2graph_binary = function(mems, directed=FALSE){
+  if(directed){
+    directed_or_undirected = "directed"
+  }
+  else{
+    directed_or_undirected = "undirected"
+  }
 
-partition2graph_binary = function(g, mems){
+  different_comm <- unique(mems)
+  #rename communities - begin
+  new_str <- vector(mode="integer",length=length(mems))
+  final <- 1
+  length_row <- 0 # ayni zamanda, community'ler arasinda en cok node'u olanin node sayisini bulucaz
+  for(node in 1:length(different_comm)){
+    vec <- different_comm[node]
+    #secilen community'ye ait kac node oldugunu buluyoruz
+    correspondant <- which(vec == mems)
 
-    different_comm <- unique(mems)
-    #rename communities - begin
-    new_str <- vector(mode="integer",length=length(mems))
-    final <- 1
-    length_row <- 0 # ayni zamanda, community'ler arasinda en cok node'u olanin node sayisini bulucaz
-    for(node in 1:length(different_comm)){
-      vec <- different_comm[node]
-      #secilen community'ye ait kac node oldugunu buluyoruz
-      correspondant <- which(vec == mems)
+    new_str[correspondant] <- final
+    final <- final + 1
 
-      new_str[correspondant] <- final
-      final <- final + 1
+    #tum community'lere kiyasla bir community'deki max node sayisini bulma icin
+    cur_length <- length(correspondant)
+    if(length_row < cur_length){
+      length_row <- cur_length
+    }
+  }
+  # rename - end
 
-      #tum community'lere kiyasla bir community'deki max node sayisini bulma icin
-      cur_length <- length(correspondant)
-      if(length_row < cur_length){
-        length_row <- cur_length
+  #max node sayisini bulduktan sonra matrix'i olusturabiliriz
+  #matrix'i once sifirla initialize ettik
+  adj <- matrix(0,nrow=length_row,ncol=length_row)
+  #community icindeki node'larin diger community'deki node'lar arasindaki linklere gore adj matrisini dolduruyoruz
+  for(node in 1:length(mems)){
+    neighs <- neighbors(g1,node)
+    for(neigh in 1:length(neighs)){
+      if(mems[node] != mems[neigh] && node != neigh && mems[neigh]<mems[node]){
+        adj[mems[node], mems[neigh]] <- adj[mems[node], mems[neigh]] +  g1[node,neigh]$weight
+        adj[mems[neigh], mems[node]] <- adj[mems[neigh], mems[node]] + g1[node,neigh]$weight
       }
     }
-    # end
+  }
 
-    #max node sayisini bulduktan sonra matrix'i olusturabiliriz
-    #matrix, inner_node bilgisi icin gerekli olacak veri yapimiz
-    #matrix'i once sifirla initialize ettik
-    mat <- matrix(0,nrow=length_row,ncol=length_row)
-    #satirlar, her community'nin sahip oldugu node'lari iceriyor
-    
-    for(comm in 1:length(different_comm)){
-      inner_nodes_in_comm <- which(comm == new_str)
-      mat[comm, 1:length(inner_nodes_in_comm)] <- inner_nodes_in_comm
-    }
-
-    g1 <- induced.subgraph(g, mat[1, which(mat[1,] != 0)])
-    E(g1)$weight <- 1
-    for(comm in 2:length(different_comm)){
-      #g1 ile g2 arasinda weight'i bulup edge()'e eklemen lazim
-      g2 <- induced.subgraph(g, mat[1, which(mat[1,] != 0)])
-      #g1[1,2] yaparsak oluyor -> ekliyo weight'i
-      g1 <- g1 %du% g2# + edge('1', '6') + edge('1', '11')
-      E(g2)$weight <- 1
-    }
+  g1 <- graph.adjacency(mode= directed_or_undirected, adj, weighted=TRUE)
+  #self loop'lari da ekliyoruz
+  for(comm in 1:length(different_comm)){
+    g1[comm, comm] <- sum(E(induced.subgraph(g,which(mems == comm)))$weight)
+  }
 
   return(g1)
 }
 
-louvain = function(g, verbose=FALSE, nb_pass=10000){
+
+#function: louvain()
+louvain = function(g, verbose=FALSE, nb_pass=10000, directed=FALSE){
 
   precision <- 0.000001
   comm_str <- seq(1, gSize) #each node is a community at beginning
@@ -75,17 +82,19 @@ louvain = function(g, verbose=FALSE, nb_pass=10000){
 
   lvl <- one_level(g,FALSE)
 
-  g <- partition2graph_binary()
+  g <- partition2graph_binary(mems, directed)
   
   while((new_mod-mod)>precision){
     mod <- new_mod
     lvl <- one_level(g,FALSE)
     mems <- lvl$membership
 
-    g <- partition2graph_binary()
+    g <- partition2graph_binary(mems, directed)
   }
 }
 
+
+#function: one_level()
 one_level = function(g, verbose=FALSE, nb_pass=10000){
   gSize <- vcount(g)
   comm_str <- seq(1, gSize) #each node is a community at beginning
