@@ -39,3 +39,30 @@ deltaQ = function(g, node, community){
 
   return(term1-term2)
 }
+
+
+
+
+
+#matris kullanimi ile hem weighted hem directed hem unweighted hem undirected'ta calisacak ortak fonksiyon bu sekilde olabilir.
+
+
+#g is a network, it is expressed as adjacency matrix. g[,] gives all links 
+#node is the node ID that is under interest. We will search the best community for node according to deltaQ score
+#communtiy is a node group, a.k.a a vector of node IDs in R. 
+
+#function deltaQ scores what happens when we put node into community. 
+
+deltaQ = function(g, node, community){
+
+	m=sum(g[,])
+	c_in <- sum(g[community,community])
+  	k_i_in <- sum(g[node, community])+sum(g[community,node])
+	c_tot <- sum(g[,community])+sum(g[community,])-sum(g[community,community])
+	k_i <- sum(g[node,])+sum(g[,node])
+
+	term1 <- ((c_in+k_i_in)/m) - (((c_tot+k_i)/m)^2)
+	term2 <- (c_in/m) - ((c_tot/m)^2) - ((k_i/m)^2)
+	
+	return(term1-term2)
+}
