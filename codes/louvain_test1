@@ -1,0 +1,28 @@
+library(igraph)
+#importing files
+source("/home/nejat/thesis/github/graph_theory/codes/deltaQ.r")
+  #source("/home/nejat/thesis/github/graph_theory/codes/modularity2.r")#bi hata var, hata asagida gosterildi
+  ## HATA - modularity2 ##
+  > previous_str
+  [1] 1 1 2 2 3 3 3
+  > modularity2(g, previous_str)
+  [1] 0.3659607
+  > modularity(g, previous_str)
+  [1] 0.3194444
+
+source("/home/nejat/thesis/github/graph_theory/codes/louvain.r")
+
+##read a graph - begin
+g <- read.graph("/home/nejat/thesis/data/toydata.edgelist", format=c("edgelist"), directed=FALSE)
+E(g)$weight <- read.table("/home/nejat/thesis/data/toydata.weight")$V1
+g = induced.subgraph(g, c(1,4,6,9,11,12,15))
+## end
+
+#weighted graph cizdirmek icin:
+plot(g, edge.label=round(E(g)$weight, 3))
+
+louvain(g,verbose=TRUE,directed=FALSE)
+
+multilevel.community(g,E(g)$weight)
+
+

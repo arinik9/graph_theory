@@ -1,0 +1,11 @@
+g1 <- erdos.renyi.game(8, 3/8)
+E(g1)$weight <- as.integer(rnorm(ecount(g1), mean=8, sd=3))
+plot(g1, edge.label=round(E(g1)$weight, 3))
+
+
+multilevel.community(g1,E(g1)$weight)
+
+louvain(g1,verbose=TRUE, directed=FALSE)
+
+
+	
