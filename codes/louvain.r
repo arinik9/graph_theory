@@ -139,7 +139,7 @@ partition2graph_binary = function(g, previous_str, comm_str, verbose=FALSE, dire
 #function: one_level()
 one_level = function(g, verbose=FALSE, nb_pass=10000){
   gSize <- vcount(g)
-  comm_str <- seq(1, gSize) #each node is a community at beginning
+  list_node <- comm_str <- seq(1, gSize) #each node is a community at beginning
   cur_mod <- new_mod <- modularity(g, comm_str)
   min_modularity <- 0.000001
 
@@ -147,6 +147,15 @@ one_level = function(g, verbose=FALSE, nb_pass=10000){
   improvement <- TRUE
   nb_iteration_done <- 0
   new_mod <- new_mod+0.01 #while'a ilk girişte sorun çıkarmasın diye => cünkü new_mod must be > cur_mod
+  #end
+
+  #configuration begin
+  #in_weight <- vector(mode='integer',length=gSize) #gSize kadar 0 koyarak initialize ettik
+  tot_weight <- vector(mode='integer',length=gSize) #gSize kadar 0 koyarak initialize ettik
+  for(node in 1:gSize){
+    tot_weight[node] <- sum(g[node,])
+    #in_weight[node] <- sum(g[node,node])
+  }
   #end
 
   memberships <- c()
@@ -165,25 +174,49 @@ one_level = function(g, verbose=FALSE, nb_pass=10000){
       
       #computation of all neighboring communities of current node
       neigh <- neighbors(g, node)
-      ncomm <- neigh[which(neigh != node)]#self loop varsa komsulari icin de kendisi de cikar, o yuzden onu cikariyoruz
-      length_ncomm <- length(ncomm)
+      neigh <- neigh[which(neigh != node)]#self loop varsa komsulari icin de kendisi de cikar, o yuzden onu cikariyoruz
+print(node)
+print(neigh)
+      length_neigh <- length(neigh)
+      comms <- unique(comm_str[neigh])#komsularinin icinden ayni komunde olanlar olcagi icin, unique ile eleyecegim
+      ncomm <- matrix(0,length(comms),length(comm_str))
+print(comms)
+      for(i in 1:length(comms)){
+	l = list_node[which(comms[i] == comm_str)]#which'den gelen indeks bilgisini node listesinde koydugum zaman hangi node'larn old. biliriz
+	print(l)
+	ncomm[i,1:length(l)] <- l
+      }
       #if any neighboring communities of current node exist
-      if(length_ncomm != 0){
+      if(length_neigh != 0){
         #remove node from its current community
+        #in_weight[node] <- in_weight[node] - sum(g[node,])
+        tot_weight[node_comm] <- tot_weight[node_comm] - sum(g[node,])
         comm_str[node] <- -1
+
         best_comm <- node_comm
+cat(" best_com init: ", best_comm, "\n")
         best_increase <- 0
-        for(i in 1:length_ncomm){
-          next_neigh_comm = ncomm[i]
-          increase <- deltaQ(g, node, next_neigh_comm)
+        for(neigh_comm in 1:length(comms)){
+print('basladi')
+          next_neigh = unique(ncomm[neigh_comm,])[which(0 != ncomm[neigh_comm,])]#ayni komunde olan node listesi
+	  #increase <- deltaQ(g, node, next_neigh)#yeni degistirildi
+	#DELTAQ fonksiyonu yerine - begin
+          m=sum(g[,])
+	  k_i_in=sum(g[node,next_neigh])
+	  c_tot = tot_weight[neigh_comm]
+	  k_i = sum(g[,node])
+	  #C++ kodundaki formul: k_i_in - c_tot*k_i/m
+	  increase = 2*k_i_in/m - 2*c_tot*k_i/(m*m)
+	#DELTAQ end
 	        cat(" DELTAQ, INCREASE: ", increase, "\n")
           if(best_increase < increase){ #increase'in pozitif olmasi lazim, yoksa orjinal community'sinde kalir
-            best_comm <- comm_str[next_neigh_comm]
+            best_comm <- comm_str[next_neigh][which(comm_str[next_neigh] != -1)][1]#next_neigh 1den fazla bile olsa ilkinin commun bilgisi yeterli
             best_increase <- increase
           }
         }
-
+cat(" best_com sonra: ", best_comm, "\n")
         #insert node in the nearest community
+	tot_weight[best_comm] <- tot_weight[best_comm] + sum(g[node,])
         comm_str[node] <- best_comm
 
         if(best_comm != node_comm){
