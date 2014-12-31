@@ -14,7 +14,7 @@ louvain = function(g, verbose=FALSE, nb_pass=10000, directed=FALSE){
   precision <- 0.000001
   gSize <- vcount(g)
   comm_str <- seq(1, gSize) #each node is a community at beginning
-  mod <- modularity(g, comm_str)
+  mod <- modularity(g, comm_str, E(g)$weight)
 
   level <- one_level(g,verbose)
   comm_str <- level$membership
@@ -25,7 +25,7 @@ louvain = function(g, verbose=FALSE, nb_pass=10000, directed=FALSE){
   g1 <- result$graph
   previous_str <- result$previous_str
   comm_str_result <- result$comm_str_result
-  plot(g1, edge.label=round(E(g)$weight, 3))
+  plot(g1, edge.label=round(E(g1)$weight, 3))
   cat(" WHILE ONCESI - WHILE ONCESI \n")
   while((new_mod-mod)>precision){
     mod <- new_mod
@@ -140,7 +140,7 @@ partition2graph_binary = function(g, previous_str, comm_str, verbose=FALSE, dire
 one_level = function(g, verbose=FALSE, nb_pass=10000){
   gSize <- vcount(g)
   list_node <- comm_str <- seq(1, gSize) #each node is a community at beginning
-  cur_mod <- new_mod <- modularity(g, comm_str)
+  cur_mod <- new_mod <- modularity(g, comm_str, E(g)$weight)
   min_modularity <- 0.000001
 
   #while init - begin
@@ -178,20 +178,22 @@ one_level = function(g, verbose=FALSE, nb_pass=10000){
 print(node)
 print(neigh)
       length_neigh <- length(neigh)
-      comms <- unique(comm_str[neigh])#komsularinin icinden ayni komunde olanlar olcagi icin, unique ile eleyecegim
-      ncomm <- matrix(0,length(comms),length(comm_str))
-print(comms)
-      for(i in 1:length(comms)){
-	l = list_node[which(comms[i] == comm_str)]#which'den gelen indeks bilgisini node listesinde koydugum zaman hangi node'larn old. biliriz
-	print(l)
-	ncomm[i,1:length(l)] <- l
-      }
+      
       #if any neighboring communities of current node exist
       if(length_neigh != 0){
         #remove node from its current community
         #in_weight[node] <- in_weight[node] - sum(g[node,])
         tot_weight[node_comm] <- tot_weight[node_comm] - sum(g[node,])
         comm_str[node] <- -1
+
+	comms <- unique(comm_str[neigh])#komsularinin icinden ayni komunde olanlar olcagi icin, unique ile eleyecegim
+        ncomm <- matrix(0,length(comms),length(comm_str))
+print(comms)
+        for(i in 1:length(comms)){
+	  l = list_node[which(comms[i] == comm_str)]#which'den gelen indeks bilgisini node listesinde koydugum zaman hangi node'larn old. biliriz
+	  print(l)
+	  ncomm[i,1:length(l)] <- l
+        }
 
         best_comm <- node_comm
 cat(" best_com init: ", best_comm, "\n")
@@ -202,13 +204,20 @@ print('basladi')
 	  #increase <- deltaQ(g, node, next_neigh)#yeni degistirildi
 	#DELTAQ fonksiyonu yerine - begin
           m=sum(g[,])
+ cat(" 11K_I_IN HESAPLARKEN: ", next_neigh, "\n")
+cat(" 22K_I_IN HESAPLARKEN: ", sum(g[node,next_neigh]), "\n")
 	  k_i_in=sum(g[node,next_neigh])
-	  c_tot = tot_weight[neigh_comm]
+cat(" 11C_TOT HESAPLARKEN: ", comms[neigh_comm], "\n")
+cat(" 11C_TOT HESAPLARKEN: ", tot_weight, "\n")
+ cat(" 22C_TOT HESAPLARKEN: ", tot_weight[comms[neigh_comm]], "\n")
+	  c_tot = tot_weight[comms[neigh_comm]]
+ cat(" K_I HESAPLARKEN: ", sum(g[,node]), "\n")
 	  k_i = sum(g[,node])
 	  #C++ kodundaki formul: k_i_in - c_tot*k_i/m
 	  increase = 2*k_i_in/m - 2*c_tot*k_i/(m*m)
 	#DELTAQ end
 	        cat(" DELTAQ, INCREASE: ", increase, "\n")
+		cat(" DELTAQ, BEST_INCREASE: ", best_increase, "\n")
           if(best_increase < increase){ #increase'in pozitif olmasi lazim, yoksa orjinal community'sinde kalir
             best_comm <- comm_str[next_neigh][which(comm_str[next_neigh] != -1)][1]#next_neigh 1den fazla bile olsa ilkinin commun bilgisi yeterli
             best_increase <- increase
@@ -222,7 +231,7 @@ cat(" best_com sonra: ", best_comm, "\n")
         if(best_comm != node_comm){
           improvement <- TRUE
         }
-        new_mod <- modularity(g, comm_str)
+        new_mod <- modularity(g, comm_str, E(g)$weight)
 
         if(verbose){
           cat(sprintf("in ONE_LEVEL function => pass_number: %d of %d (nb_pass) => new_mod=%s, cur_mod=%s\n", nb_iteration_done, nb_pass, new_mod, cur_mod))
